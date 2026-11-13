@@ -1,0 +1,102 @@
+# FreshTrack
+
+FreshTrack is a first-year undergraduate web development mini-project. It brings a few common student tools—attendance, grade estimation, and monthly budgeting—together in a single dashboard.
+
+## Problem statement
+
+Students may track attendance, semester grades, and personal expenses in separate places. FreshTrack provides a simple dashboard to calculate and review these figures in one place.
+
+## Objectives
+
+- Calculate attendance and warn when it is below 75%.
+- Estimate a CGPA from two semester SGPAs.
+- Calculate a remaining monthly budget and visualize expenses.
+- Provide a welcome screen and a help/contact form.
+- Validate user-entered values and preserve successful entries in the browser.
+- Present the tools in a dashboard that can be extended for responsive use.
+
+## Technologies
+
+- HTML5 for the page structure and form controls.
+- CSS3 for styling and layout (`style.css`).
+- JavaScript for calculations, input validation, chart updates, and browser storage (`main.js` and `script.js`).
+- Chart.js for the expense pie chart.
+- Font Awesome for sidebar icons.
+- Web3Forms endpoint for the help/contact form.
+
+## Features and calculations
+
+### Welcome screen
+
+A welcome overlay appears when the page loads. The Get Started button closes it, and it also closes automatically after a short delay.
+
+### Attendance tracker
+
+The tracker calculates:
+
+`Attendance percentage = (attended classes / total classes) * 100`
+
+It displays the percentage and shows a warning when attendance is below 75%.
+
+### CGPA predictor
+
+The current estimator uses two semester values:
+
+`Estimated CGPA = (Semester 1 SGPA + Semester 2 SGPA) / 2`
+
+This is a simple estimate and does not account for course credits.
+
+### Budget tracker and expense chart
+
+The budget tracker adds food, travel, and entertainment expenses:
+
+`Remaining budget = monthly budget - (food + travel + entertainment)`
+
+It displays the remaining amount and a Chart.js pie chart of the three expense categories. Expenses may exceed the budget; in that case, the remaining balance is negative.
+
+### Input validation
+
+- Attendance values must be whole numbers; total classes must be greater than zero, and attended classes cannot exceed the total.
+- Both SGPA values are required and must be between 0 and 10.
+- Budget and expense values are required and cannot be negative.
+- Invalid entries display a message and do not update the corresponding summary or saved values.
+
+### Browser storage
+
+After a successful calculation, the corresponding values are saved in the browser's `localStorage` and restored when the page is opened again in the same browser. Data stays on that browser/device; it is not an account, cloud backup, or cross-device sync. Clearing browser site data removes these saved entries. A status message on the dashboard reports whether data was restored or saved.
+
+### Help/contact
+
+The help form collects an email address and a query and submits them to Web3Forms. The access key in `pop.html` is currently a placeholder (`YOUR_ACCESS_KEY`); replace it with a valid key for the form to work.
+
+## Running the project
+
+1. Keep `pop.html`, `style.css`, `main.js`, and `script.js` together in the same folder.
+2. Open `pop.html` in a modern browser. For predictable browser storage behavior, run the folder through a local development server.
+3. Internet access is needed to load the external Chart.js and Font Awesome libraries and to submit the help form.
+
+## Project structure
+
+- `pop.html` — dashboard content, inputs, and external libraries.
+- `style.css` — page styling.
+- `main.js` — welcome screen, calculators, validation, chart, and `localStorage`.
+- `script.js` — help form submission.
+- `Read-me.md` — original project notes.
+
+## Suggested presentation and report outline
+
+1. Problem statement and analysis of existing approaches (for example, paper notes, spreadsheets, or student portals).
+2. Project objectives, feasibility, and planned modules.
+3. Methodology and calculations used.
+4. Implementation details and screenshots of the dashboard and each feature.
+5. Live demonstration, including invalid input handling and data restoration after refresh.
+6. Conclusion, limitations, and possible future improvements.
+
+For a four-person group, divide work across problem analysis/report research, HTML structure/navigation, CSS/responsive design, and JavaScript features/testing. Every member should understand the full project and explain their own contribution during the presentation.
+
+## Current limitations and possible improvements
+
+- The CGPA is an unweighted estimate based on two semesters.
+- Data is stored locally in one browser and is not synchronized.
+- The contact form needs a valid Web3Forms access key.
+- Future improvements could include subject-wise attendance, additional semesters, more expense categories, and expanded mobile styling.

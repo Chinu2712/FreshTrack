@@ -56,19 +56,27 @@
 
     </div>
 
-    <div class="section">
+    <p id="storageStatus" role="status" aria-live="polite"></p>
+
+    <div class="section" id="attendance-section">
 
         <h2>Attendance Tracker</h2>
 
         <input
             type="number"
             id="totalClasses"
-            placeholder="Total Classes">
+            placeholder="Total Classes"
+            min="1"
+            step="1"
+            required>
 
         <input
             type="number"
             id="attendedClasses"
-            placeholder="Attended Classes">
+            placeholder="Attended Classes"
+            min="0"
+            step="1"
+            required>
 
         <button onclick="calculateAttendance()">
             Check Attendance
@@ -80,7 +88,7 @@
 
     </div>
 
-    <div class="section">
+    <div class="section" id="cgpa-section">
 
         <h2>CGPA Predictor</h2>
 
@@ -88,13 +96,19 @@
             type="number"
             id="sgpa1"
             placeholder="Semester 1 SGPA"
-            step="0.1">
+            min="0"
+            max="10"
+            step="any"
+            required>
 
         <input
             type="number"
             id="sgpa2"
             placeholder="Semester 2 SGPA"
-            step="0.1">
+            min="0"
+            max="10"
+            step="any"
+            required>
 
         <button onclick="calculateCGPA()">
             Calculate CGPA
@@ -104,29 +118,41 @@
 
     </div>
 
-    <div class="section">
+    <div class="section" id="budget-section">
 
         <h2>Budget Tracker</h2>
 
         <input
             type="number"
             id="budget"
-            placeholder="Monthly Budget">
+            placeholder="Monthly Budget"
+            min="0"
+            step="0.01"
+            required>
 
         <input
             type="number"
             id="foodExpense"
-            placeholder = "Food Expense">
+            placeholder = "Food Expense"
+            min="0"
+            step="0.01"
+            required>
 
         <input
             type = "number"
             id = "travelExpense"
-            placeholder = "Travel Expense">
+            placeholder = "Travel Expense"
+            min="0"
+            step="0.01"
+            required>
 
         <input
             type = "number"
             id = "entExpense"
-            placeholder = "Entertainment Expense">
+            placeholder = "Entertainment Expense"
+            min="0"
+            step="0.01"
+            required>
 
         <button onclick = "calculateBudget()">
             Generate Report
