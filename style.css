@@ -4,6 +4,16 @@
     box-sizing:border-box;
 }
 
+html{
+    scroll-behavior:smooth;
+}
+
+@media (prefers-reduced-motion: reduce){
+    html{
+        scroll-behavior:auto;
+    }
+}
+
 body{
     display:flex;
     font-family:Arial, sans-serif;
@@ -118,6 +128,7 @@ body{
     margin-left:240px;
     padding:20px;
     width:100%;
+    scroll-margin-top:20px;
 }
 
 .summary{
@@ -142,6 +153,7 @@ body{
     padding:20px;
     border-radius:15px;
     margin-bottom:25px;
+    scroll-margin-top:20px;
 }
 
 input{
