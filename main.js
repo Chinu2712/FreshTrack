@@ -66,41 +66,60 @@ function loadSavedData() {
         return;
     }
 
-    const fieldsBySection = {
-        attendance: ['total', 'attended'],
-        cgpa: ['sgpa1', 'sgpa2'],
-        budget: ['amount', 'food', 'travel', 'entertainment']
-    };
     let hasInvalidSection = false;
 
-    Object.entries(fieldsBySection).forEach(([section, fields]) => {
-        const values = data[section];
-        if (!values) {
-            return;
-        }
-
-        if (typeof values !== 'object' ||
-            fields.some((field) => !Number.isFinite(values[field]))) {
+    const attendance = data.attendance;
+    if (attendance) {
+        const target = attendance.target === undefined ? 75 : attendance.target;
+        if (typeof attendance !== 'object' || !Number.isInteger(attendance.total) ||
+            !Number.isInteger(attendance.attended) || attendance.total < 1 ||
+            attendance.attended < 0 || attendance.attended > attendance.total ||
+            !Number.isFinite(target) || target < 0 || target > 100) {
             hasInvalidSection = true;
-            return;
+        } else {
+            savedData.attendance = { total: attendance.total, attended: attendance.attended, target };
+            document.getElementById('totalClasses').value = attendance.total;
+            document.getElementById('attendedClasses').value = attendance.attended;
+            document.getElementById('attendanceTarget').value = target;
         }
+    }
 
-        savedData[section] = values;
-        const inputIds = {
-            attendance: { total: 'totalClasses', attended: 'attendedClasses' },
-            cgpa: { sgpa1: 'sgpa1', sgpa2: 'sgpa2' },
-            budget: {
-                amount: 'budget',
-                food: 'foodExpense',
-                travel: 'travelExpense',
-                entertainment: 'entExpense'
-            }
-        };
+    const cgpa = data.cgpa;
+    if (cgpa) {
+        const credits1 = cgpa.sgpa1Credits;
+        const credits2 = cgpa.sgpa2Credits;
+        if (typeof cgpa !== 'object' || !Number.isFinite(cgpa.sgpa1) ||
+            !Number.isFinite(cgpa.sgpa2) || cgpa.sgpa1 < 0 || cgpa.sgpa1 > 10 ||
+            cgpa.sgpa2 < 0 || cgpa.sgpa2 > 10 ||
+            (credits1 !== undefined && credits1 !== null &&
+                (!Number.isFinite(credits1) || credits1 <= 0)) ||
+            (credits2 !== undefined && credits2 !== null &&
+                (!Number.isFinite(credits2) || credits2 <= 0)) ||
+            ((credits1 == null) !== (credits2 == null))) {
+            hasInvalidSection = true;
+        } else {
+            savedData.cgpa = { sgpa1: cgpa.sgpa1, sgpa2: cgpa.sgpa2, sgpa1Credits: credits1 ?? null, sgpa2Credits: credits2 ?? null };
+            document.getElementById('sgpa1').value = cgpa.sgpa1;
+            document.getElementById('sgpa2').value = cgpa.sgpa2;
+            document.getElementById('sgpa1Credits').value = credits1 ?? '';
+            document.getElementById('sgpa2Credits').value = credits2 ?? '';
+        }
+    }
 
-        fields.forEach((field) => {
-            document.getElementById(inputIds[section][field]).value = values[field];
-        });
-    });
+    const budget = data.budget;
+    if (budget) {
+        const budgetFields = ['amount', 'food', 'travel', 'entertainment'];
+        if (typeof budget !== 'object' ||
+            budgetFields.some((field) => !Number.isFinite(budget[field]) || budget[field] < 0)) {
+            hasInvalidSection = true;
+        } else {
+            savedData.budget = budget;
+            document.getElementById('budget').value = budget.amount;
+            document.getElementById('foodExpense').value = budget.food;
+            document.getElementById('travelExpense').value = budget.travel;
+            document.getElementById('entExpense').value = budget.entertainment;
+        }
+    }
 
     if (savedData.attendance) calculateAttendance();
     if (savedData.cgpa) calculateCGPA();
@@ -128,51 +147,76 @@ function calculateAttendance(){
 
     const totalInput = document.getElementById("totalClasses");
     const attendedInput = document.getElementById("attendedClasses");
+    const targetInput = document.getElementById("attendanceTarget");
     const total = Number(totalInput.value);
     const attended = Number(attendedInput.value);
+    const target = Number(targetInput.value);
     const result = document.getElementById("attendanceResult");
+    const targetResult = document.getElementById("attendanceTargetResult");
     const warning = document.getElementById("warning");
 
-    if (!totalInput.value || !attendedInput.value ||
+    if (!totalInput.value || !attendedInput.value || !targetInput.value ||
         !Number.isInteger(total) || !Number.isInteger(attended) ||
+        !Number.isFinite(target) || target < 0 || target > 100 ||
         total < 1 || attended < 0 || attended > total) {
-        result.innerText = "Enter whole numbers with total classes above 0 and attended classes between 0 and total.";
+        result.innerText = "Enter whole-number class counts with total classes above 0, attended classes between 0 and total, and a target from 0 to 100%.";
+        targetResult.innerText = "";
         warning.innerText = "";
         return;
     }
 
     const percentage = (attended / total) * 100;
+    let targetMessage;
+    if (percentage >= target) {
+        targetMessage = "Attendance target met. No extra classes needed.";
+    } else if (target === 100) {
+        targetMessage = "A 100% attendance target cannot be reached after missing a class.";
+    } else {
+        const requiredClasses = Math.ceil(((target / 100) * total - attended) / (1 - target / 100));
+        targetMessage = "Attend the next " + requiredClasses + " classes to reach " + target + "%.";
+    }
 
     result.innerText = "Attendance: " + percentage.toFixed(2) + "%";
+    targetResult.innerText = targetMessage;
 
     document.getElementById("attendanceCard").innerText = percentage.toFixed(1) + "%";
 
-    warning.innerText = percentage < 75
-        ? "⚠ Warning: Attendance below 75%"
+    warning.innerText = percentage < target
+        ? "⚠ Warning: Attendance below " + target + "%"
         : "✅ Attendance Safe";
-    saveSection('attendance', { total, attended });
+    saveSection('attendance', { total, attended, target });
 }
 
 function calculateCGPA(){
 
     const sgpa1Input = document.getElementById("sgpa1");
     const sgpa2Input = document.getElementById("sgpa2");
+    const credits1Input = document.getElementById("sgpa1Credits");
+    const credits2Input = document.getElementById("sgpa2Credits");
     const sgpa1 = Number(sgpa1Input.value);
     const sgpa2 = Number(sgpa2Input.value);
+    const credits1 = credits1Input.value === '' ? null : Number(credits1Input.value);
+    const credits2 = credits2Input.value === '' ? null : Number(credits2Input.value);
 
     if (!sgpa1Input.value || !sgpa2Input.value ||
         !Number.isFinite(sgpa1) || !Number.isFinite(sgpa2) ||
-        sgpa1 < 0 || sgpa1 > 10 || sgpa2 < 0 || sgpa2 > 10) {
+        sgpa1 < 0 || sgpa1 > 10 || sgpa2 < 0 || sgpa2 > 10 ||
+        (credits1 === null) !== (credits2 === null) ||
+        (credits1 !== null && (!Number.isFinite(credits1) || credits1 <= 0)) ||
+        (credits2 !== null && (!Number.isFinite(credits2) || credits2 <= 0))) {
         document.getElementById("cgpaResult").innerText =
-            "Enter both semester SGPAs as numbers from 0 to 10.";
+            "Enter both SGPAs from 0 to 10 and either both credit values above 0 or leave both credits blank.";
         return;
     }
 
-    const cgpa = (sgpa1 + sgpa2) / 2;
+    const cgpa = credits1 === null
+        ? (sgpa1 + sgpa2) / 2
+        : ((sgpa1 * credits1) + (sgpa2 * credits2)) / (credits1 + credits2);
 
-    document.getElementById("cgpaResult").innerText = "Estimated CGPA: " + cgpa.toFixed(2);
+    document.getElementById("cgpaResult").innerText = "Estimated CGPA: " + cgpa.toFixed(2) +
+        (credits1 === null ? " (simple average)" : " (credit-weighted)");
     document.getElementById("cgpaCard").innerText = cgpa.toFixed(2);
-    saveSection('cgpa', { sgpa1, sgpa2 });
+    saveSection('cgpa', { sgpa1, sgpa2, sgpa1Credits: credits1, sgpa2Credits: credits2 });
 }
 
 function calculateBudget(){

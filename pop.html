@@ -78,11 +78,23 @@
             step="1"
             required>
 
+        <input
+            type="number"
+            id="attendanceTarget"
+            placeholder="Attendance Target (%)"
+            min="0"
+            max="100"
+            step="any"
+            value="75"
+            required>
+
         <button onclick="calculateAttendance()">
             Check Attendance
         </button>
 
         <p id="attendanceResult"></p>
+
+        <p id="attendanceTargetResult"></p>
 
         <p id="warning"></p>
 
@@ -109,6 +121,22 @@
             max="10"
             step="any"
             required>
+
+        <input
+            type="number"
+            id="sgpa1Credits"
+            placeholder="Semester 1 Credits (optional)"
+            min="0.01"
+            step="any">
+
+        <input
+            type="number"
+            id="sgpa2Credits"
+            placeholder="Semester 2 Credits (optional)"
+            min="0.01"
+            step="any">
+
+        <p>Enter credits for both semesters to calculate a credit-weighted CGPA, or leave both blank for a simple average.</p>
 
         <button onclick="calculateCGPA()">
             Calculate CGPA
