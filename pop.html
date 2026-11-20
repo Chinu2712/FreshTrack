@@ -26,6 +26,7 @@
     <h2><i class="fa-solid fa-school"></i> FreshTrack</h2>
 
     <a href="#dashboard-section"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="#profiles-section"><i class="fas fa-user"></i> Profiles</a>
     <a href="#attendance-section"><i class="fas fa-calendar-check"></i> Attendance</a>
     <a href="#cgpa-section"><i class="fas fa-chart-line"></i> CGPA</a>
     <a href="#budget-section"><i class="fas fa-wallet"></i> Budget</a>
@@ -57,6 +58,30 @@
     </div>
 
     <p id="storageStatus" role="status" aria-live="polite"></p>
+
+    <div class="section" id="profiles-section">
+        <h2>Profiles</h2>
+        <p>Keep separate dashboard data for up to six people in this browser.</p>
+
+        <label for="profileSelect">Switch profile</label>
+        <select id="profileSelect"></select>
+        <p>Active profile: <strong id="activeProfileName">My Profile</strong></p>
+        <p id="profileCount"></p>
+
+        <label for="newProfileName">New profile name</label>
+        <input
+            type="text"
+            id="newProfileName"
+            placeholder="Enter a name"
+            maxlength="40"
+            autocomplete="off">
+        <div class="profile-actions">
+            <button type="button" id="addProfileBtn">Add Profile</button>
+            <button type="button" id="removeProfileBtn">Remove Current Profile</button>
+        </div>
+        <p id="profileStatus" role="status" aria-live="polite"></p>
+        <p>Profiles are saved only in this browser and are not password-protected. Do not store sensitive information.</p>
+    </div>
 
     <div class="section" id="attendance-section">
 
@@ -206,12 +231,17 @@
           <p> For any assistance or queries, please contact us -> </p>
           <form action="https://api.web3forms.com/submit" method="POST" id="helpForm">
             <input type="hidden" name="access_key" value="YOUR_ACCESS_KEY">
+            <input type="hidden" name="subject" value="FreshTrack Help/Contact Message">
+            <input type="hidden" name="from_name" value="FreshTrack Contact Form">
             <div>
-            <input type="email" name="email" placeholder="Your Email Address" required>
-            <textarea name="message" placeholder="Your Query" required></textarea>
+            <label for="contactEmail">Your email address</label>
+            <input type="email" id="contactEmail" name="email" placeholder="you@example.com" autocomplete="email" required>
+            <label for="contactMessage">Your message</label>
+            <textarea id="contactMessage" name="message" placeholder="How can we help?" maxlength="5000" required></textarea>
             </div>
             <button type="submit" id="submitBtn">Send Message</button>
             <p id="formResponse" role="status" aria-live="polite"></p>
+            <p>If direct sending is not configured, your email app will open with a message addressed to shauryasalke@gmail.com.</p>
           </form>
         </div>
     </div>

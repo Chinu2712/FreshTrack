@@ -1,7 +1,8 @@
 window.addEventListener('DOMContentLoaded', () => {
   const popup = document.getElementById('welcome-screen');
   const enterBtn = document.getElementById('close-popup');
-  loadSavedData();
+  initializeProfileControls();
+  loadProfiles();
 
   function hidePopup() {
     if (!popup || popup.classList.contains('popup-hidden')) {
@@ -23,12 +24,20 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 let chart;
-const STORAGE_KEY = 'freshTrackDashboard';
-const savedData = {
-    attendance: null,
-    cgpa: null,
-    budget: null
-};
+const STORAGE_KEY = 'freshTrackProfiles';
+const LEGACY_STORAGE_KEY = 'freshTrackDashboard';
+const MAX_PROFILES = 6;
+let profiles = [];
+let activeProfileId = null;
+let savedData = createEmptyData();
+
+function createEmptyData() {
+    return {
+        attendance: null,
+        cgpa: null,
+        budget: null
+    };
+}
 
 function showStorageStatus(message, isError = false) {
     const status = document.getElementById('storageStatus');
@@ -38,112 +47,321 @@ function showStorageStatus(message, isError = false) {
     }
 }
 
-function loadSavedData() {
+function createProfile(name, data = createEmptyData()) {
+    return {
+        id: 'profile-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+        name,
+        data
+    };
+}
+
+function normalizeProfileData(data) {
+    const normalized = createEmptyData();
+    let hasInvalidSection = false;
+
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return { data: normalized, hasInvalidSection: true };
+    }
+
+    const attendance = data.attendance;
+    if (attendance !== undefined && attendance !== null) {
+        const target = attendance.target === undefined ? 75 : attendance.target;
+        if (typeof attendance !== 'object' || Array.isArray(attendance) ||
+            !Number.isInteger(attendance.total) || !Number.isInteger(attendance.attended) ||
+            attendance.total < 1 || attendance.attended < 0 ||
+            attendance.attended > attendance.total || !Number.isFinite(target) ||
+            target < 0 || target > 100) {
+            hasInvalidSection = true;
+        } else {
+            normalized.attendance = {
+                total: attendance.total,
+                attended: attendance.attended,
+                target
+            };
+        }
+    }
+
+    const cgpa = data.cgpa;
+    if (cgpa !== undefined && cgpa !== null) {
+        const credits1 = cgpa.sgpa1Credits;
+        const credits2 = cgpa.sgpa2Credits;
+        if (typeof cgpa !== 'object' || Array.isArray(cgpa) ||
+            !Number.isFinite(cgpa.sgpa1) || !Number.isFinite(cgpa.sgpa2) ||
+            cgpa.sgpa1 < 0 || cgpa.sgpa1 > 10 || cgpa.sgpa2 < 0 || cgpa.sgpa2 > 10 ||
+            (credits1 != null && (!Number.isFinite(credits1) || credits1 <= 0)) ||
+            (credits2 != null && (!Number.isFinite(credits2) || credits2 <= 0)) ||
+            ((credits1 == null) !== (credits2 == null))) {
+            hasInvalidSection = true;
+        } else {
+            normalized.cgpa = {
+                sgpa1: cgpa.sgpa1,
+                sgpa2: cgpa.sgpa2,
+                sgpa1Credits: credits1 ?? null,
+                sgpa2Credits: credits2 ?? null
+            };
+        }
+    }
+
+    const budget = data.budget;
+    if (budget !== undefined && budget !== null) {
+        const budgetFields = ['amount', 'food', 'travel', 'entertainment'];
+        if (typeof budget !== 'object' || Array.isArray(budget) ||
+            budgetFields.some((field) => !Number.isFinite(budget[field]) || budget[field] < 0)) {
+            hasInvalidSection = true;
+        } else {
+            normalized.budget = {
+                amount: budget.amount,
+                food: budget.food,
+                travel: budget.travel,
+                entertainment: budget.entertainment
+            };
+        }
+    }
+
+    return { data: normalized, hasInvalidSection };
+}
+
+function loadProfiles() {
     let rawData;
 
     try {
         rawData = localStorage.getItem(STORAGE_KEY);
     } catch (error) {
-        showStorageStatus('Could not access saved data in this browser.', true);
+        profiles = [createProfile('My Profile')];
+        activeProfileId = profiles[0].id;
+        renderProfiles();
+        loadActiveProfile();
+        showStorageStatus('Browser storage is unavailable. Profiles will not persist after closing this page.', true);
         return;
     }
 
-    if (!rawData) {
-        showStorageStatus('Your entries will be saved in this browser.');
-        return;
-    }
+    let hasInvalidData = false;
+    if (rawData) {
+        try {
+            const stored = JSON.parse(rawData);
+            if (stored && Array.isArray(stored.profiles)) {
+                stored.profiles.slice(0, MAX_PROFILES).forEach((profile) => {
+                    const profileName = typeof profile?.name === 'string'
+                        ? profile.name.trim().slice(0, 40)
+                        : '';
+                    if (!profile || typeof profile.id !== 'string' ||
+                        !profileName ||
+                        profiles.some((existing) => existing.id === profile.id ||
+                            existing.name.toLowerCase() === profileName.toLowerCase())) {
+                        hasInvalidData = true;
+                        return;
+                    }
 
-    let data;
-    try {
-        data = JSON.parse(rawData);
-    } catch (error) {
-        showStorageStatus('Saved data could not be read. Enter values and calculate to replace it.', true);
-        return;
-    }
-
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-        showStorageStatus('Saved data has an invalid format. Enter values and calculate to replace it.', true);
-        return;
-    }
-
-    let hasInvalidSection = false;
-
-    const attendance = data.attendance;
-    if (attendance) {
-        const target = attendance.target === undefined ? 75 : attendance.target;
-        if (typeof attendance !== 'object' || !Number.isInteger(attendance.total) ||
-            !Number.isInteger(attendance.attended) || attendance.total < 1 ||
-            attendance.attended < 0 || attendance.attended > attendance.total ||
-            !Number.isFinite(target) || target < 0 || target > 100) {
-            hasInvalidSection = true;
-        } else {
-            savedData.attendance = { total: attendance.total, attended: attendance.attended, target };
-            document.getElementById('totalClasses').value = attendance.total;
-            document.getElementById('attendedClasses').value = attendance.attended;
-            document.getElementById('attendanceTarget').value = target;
+                    const normalized = normalizeProfileData(profile.data);
+                    hasInvalidData = hasInvalidData || normalized.hasInvalidSection;
+                    profiles.push({
+                        id: profile.id,
+                        name: profileName,
+                        data: normalized.data
+                    });
+                });
+                if (stored.profiles.length > MAX_PROFILES) hasInvalidData = true;
+                activeProfileId = profiles.some((profile) => profile.id === stored.activeProfileId)
+                    ? stored.activeProfileId
+                    : profiles[0]?.id;
+            } else {
+                hasInvalidData = true;
+            }
+        } catch (error) {
+            hasInvalidData = true;
         }
-    }
-
-    const cgpa = data.cgpa;
-    if (cgpa) {
-        const credits1 = cgpa.sgpa1Credits;
-        const credits2 = cgpa.sgpa2Credits;
-        if (typeof cgpa !== 'object' || !Number.isFinite(cgpa.sgpa1) ||
-            !Number.isFinite(cgpa.sgpa2) || cgpa.sgpa1 < 0 || cgpa.sgpa1 > 10 ||
-            cgpa.sgpa2 < 0 || cgpa.sgpa2 > 10 ||
-            (credits1 !== undefined && credits1 !== null &&
-                (!Number.isFinite(credits1) || credits1 <= 0)) ||
-            (credits2 !== undefined && credits2 !== null &&
-                (!Number.isFinite(credits2) || credits2 <= 0)) ||
-            ((credits1 == null) !== (credits2 == null))) {
-            hasInvalidSection = true;
-        } else {
-            savedData.cgpa = { sgpa1: cgpa.sgpa1, sgpa2: cgpa.sgpa2, sgpa1Credits: credits1 ?? null, sgpa2Credits: credits2 ?? null };
-            document.getElementById('sgpa1').value = cgpa.sgpa1;
-            document.getElementById('sgpa2').value = cgpa.sgpa2;
-            document.getElementById('sgpa1Credits').value = credits1 ?? '';
-            document.getElementById('sgpa2Credits').value = credits2 ?? '';
-        }
-    }
-
-    const budget = data.budget;
-    if (budget) {
-        const budgetFields = ['amount', 'food', 'travel', 'entertainment'];
-        if (typeof budget !== 'object' ||
-            budgetFields.some((field) => !Number.isFinite(budget[field]) || budget[field] < 0)) {
-            hasInvalidSection = true;
-        } else {
-            savedData.budget = budget;
-            document.getElementById('budget').value = budget.amount;
-            document.getElementById('foodExpense').value = budget.food;
-            document.getElementById('travelExpense').value = budget.travel;
-            document.getElementById('entExpense').value = budget.entertainment;
-        }
-    }
-
-    if (savedData.attendance) calculateAttendance();
-    if (savedData.cgpa) calculateCGPA();
-    if (savedData.budget) calculateBudget();
-
-    if (hasInvalidSection) {
-        showStorageStatus('Some saved entries were invalid and were not restored.', true);
     } else {
-        showStorageStatus('Saved entries restored from this browser.');
+        try {
+            const legacyData = localStorage.getItem(LEGACY_STORAGE_KEY);
+            if (legacyData) {
+                const normalized = normalizeProfileData(JSON.parse(legacyData));
+                profiles.push(createProfile('My Profile', normalized.data));
+                hasInvalidData = normalized.hasInvalidSection;
+            }
+        } catch (error) {
+            hasInvalidData = true;
+        }
+    }
+
+    if (profiles.length === 0) profiles.push(createProfile('My Profile'));
+    if (!activeProfileId) activeProfileId = profiles[0].id;
+
+    renderProfiles();
+    loadActiveProfile();
+    if (hasInvalidData) {
+        showStorageStatus('Some saved profile data could not be restored. Check the affected profile and recalculate its values.', true);
+    } else if (rawData) {
+        showStorageStatus('Profiles and saved entries restored from this browser.');
+    } else {
+        if (saveProfiles()) {
+            showStorageStatus('Your profile and entries are saved in this browser.');
+        } else {
+            showStorageStatus('Your profile is available for this session, but could not be saved in this browser.', true);
+        }
+    }
+}
+
+function initializeProfileControls() {
+    document.getElementById('profileSelect').addEventListener('change', (event) => {
+        switchProfile(event.target.value);
+    });
+    document.getElementById('addProfileBtn').addEventListener('click', createNewProfile);
+    document.getElementById('removeProfileBtn').addEventListener('click', removeCurrentProfile);
+}
+
+function getActiveProfile() {
+    return profiles.find((profile) => profile.id === activeProfileId);
+}
+
+function renderProfiles() {
+    const select = document.getElementById('profileSelect');
+    select.innerHTML = '';
+    profiles.forEach((profile) => {
+        const option = document.createElement('option');
+        option.value = profile.id;
+        option.textContent = profile.name;
+        select.appendChild(option);
+    });
+    select.value = activeProfileId;
+    document.getElementById('addProfileBtn').disabled = profiles.length >= MAX_PROFILES;
+    document.getElementById('removeProfileBtn').disabled = profiles.length <= 1;
+    document.getElementById('profileCount').innerText = profiles.length + ' / ' + MAX_PROFILES + ' profiles';
+}
+
+function loadActiveProfile() {
+    const profile = getActiveProfile();
+    if (!profile) return;
+
+    savedData = profile.data;
+    const inputIds = [
+        'totalClasses', 'attendedClasses', 'sgpa1', 'sgpa2', 'sgpa1Credits',
+        'sgpa2Credits', 'budget', 'foodExpense', 'travelExpense', 'entExpense'
+    ];
+    inputIds.forEach((id) => {
+        document.getElementById(id).value = '';
+    });
+    document.getElementById('attendanceTarget').value = '75';
+    document.getElementById('attendanceResult').innerText = '';
+    document.getElementById('attendanceTargetResult').innerText = '';
+    document.getElementById('warning').innerText = '';
+    document.getElementById('cgpaResult').innerText = '';
+    document.getElementById('budgetResult').innerText = '';
+    document.getElementById('attendanceCard').innerText = '0%';
+    document.getElementById('cgpaCard').innerText = '0.0';
+    document.getElementById('budgetCard').innerText = '₹0';
+    if (chart) {
+        chart.destroy();
+        chart = null;
+    }
+
+    if (savedData.attendance) {
+        document.getElementById('totalClasses').value = savedData.attendance.total;
+        document.getElementById('attendedClasses').value = savedData.attendance.attended;
+        document.getElementById('attendanceTarget').value = savedData.attendance.target;
+        calculateAttendance(false);
+    }
+    if (savedData.cgpa) {
+        document.getElementById('sgpa1').value = savedData.cgpa.sgpa1;
+        document.getElementById('sgpa2').value = savedData.cgpa.sgpa2;
+        document.getElementById('sgpa1Credits').value = savedData.cgpa.sgpa1Credits ?? '';
+        document.getElementById('sgpa2Credits').value = savedData.cgpa.sgpa2Credits ?? '';
+        calculateCGPA(false);
+    }
+    if (savedData.budget) {
+        document.getElementById('budget').value = savedData.budget.amount;
+        document.getElementById('foodExpense').value = savedData.budget.food;
+        document.getElementById('travelExpense').value = savedData.budget.travel;
+        document.getElementById('entExpense').value = savedData.budget.entertainment;
+        calculateBudget(false);
+    }
+    document.getElementById('activeProfileName').innerText = profile.name;
+}
+
+function switchProfile(profileId) {
+    if (!profiles.some((profile) => profile.id === profileId)) return;
+    activeProfileId = profileId;
+    renderProfiles();
+    loadActiveProfile();
+    if (saveProfiles()) {
+        showStorageStatus('Switched to profile "' + getActiveProfile().name + '".');
+    }
+}
+
+function createNewProfile() {
+    const nameInput = document.getElementById('newProfileName');
+    const name = nameInput.value.trim();
+
+    if (!name) {
+        document.getElementById('profileStatus').innerText = 'Enter a profile name first.';
+        return;
+    }
+    if (name.length > 40) {
+        document.getElementById('profileStatus').innerText = 'Profile names must be 40 characters or fewer.';
+        return;
+    }
+    if (profiles.length >= MAX_PROFILES) {
+        document.getElementById('profileStatus').innerText = 'You can create up to ' + MAX_PROFILES + ' profiles.';
+        return;
+    }
+    if (profiles.some((profile) => profile.name.toLowerCase() === name.toLowerCase())) {
+        document.getElementById('profileStatus').innerText = 'A profile with that name already exists.';
+        return;
+    }
+
+    const profile = createProfile(name);
+    profiles.push(profile);
+    activeProfileId = profile.id;
+    nameInput.value = '';
+    renderProfiles();
+    loadActiveProfile();
+    document.getElementById('profileStatus').innerText = saveProfiles()
+        ? 'Profile "' + name + '" created and saved.'
+        : 'Profile "' + name + '" is available for this session but could not be saved.';
+}
+
+function removeCurrentProfile() {
+    if (profiles.length <= 1) {
+        document.getElementById('profileStatus').innerText = 'Keep at least one profile.';
+        return;
+    }
+
+    const profile = getActiveProfile();
+    if (!window.confirm('Remove profile "' + profile.name + '" and its saved data?')) return;
+
+    profiles = profiles.filter((item) => item.id !== activeProfileId);
+    activeProfileId = profiles[0].id;
+    renderProfiles();
+    loadActiveProfile();
+    document.getElementById('profileStatus').innerText = saveProfiles()
+        ? 'Profile "' + profile.name + '" removed.'
+        : 'Profile "' + profile.name + '" removed for this session, but the change could not be saved.';
+}
+
+function saveProfiles() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            activeProfileId,
+            profiles
+        }));
+        return true;
+    } catch (error) {
+        showStorageStatus('Could not save profiles. Check browser storage settings.', true);
+        return false;
     }
 }
 
 function saveSection(section, values) {
     savedData[section] = values;
-
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
-        showStorageStatus('Entries saved in this browser.');
-    } catch (error) {
-        showStorageStatus('Could not save entries. Check browser storage settings.', true);
+    const profile = getActiveProfile();
+    if (profile) {
+        profile.data = savedData;
+        if (saveProfiles()) {
+            showStorageStatus('Entries saved to profile "' + profile.name + '" in this browser.');
+        }
     }
 }
 
-function calculateAttendance(){
+function calculateAttendance(shouldSave = true){
 
     const totalInput = document.getElementById("totalClasses");
     const attendedInput = document.getElementById("attendedClasses");
@@ -184,10 +402,10 @@ function calculateAttendance(){
     warning.innerText = percentage < target
         ? "⚠ Warning: Attendance below " + target + "%"
         : "✅ Attendance Safe";
-    saveSection('attendance', { total, attended, target });
+    if (shouldSave) saveSection('attendance', { total, attended, target });
 }
 
-function calculateCGPA(){
+function calculateCGPA(shouldSave = true){
 
     const sgpa1Input = document.getElementById("sgpa1");
     const sgpa2Input = document.getElementById("sgpa2");
@@ -216,10 +434,10 @@ function calculateCGPA(){
     document.getElementById("cgpaResult").innerText = "Estimated CGPA: " + cgpa.toFixed(2) +
         (credits1 === null ? " (simple average)" : " (credit-weighted)");
     document.getElementById("cgpaCard").innerText = cgpa.toFixed(2);
-    saveSection('cgpa', { sgpa1, sgpa2, sgpa1Credits: credits1, sgpa2Credits: credits2 });
+    if (shouldSave) saveSection('cgpa', { sgpa1, sgpa2, sgpa1Credits: credits1, sgpa2Credits: credits2 });
 }
 
-function calculateBudget(){
+function calculateBudget(shouldSave = true){
 
     const inputValues = {
         amount: document.getElementById("budget").value,
@@ -249,7 +467,7 @@ function calculateBudget(){
     document.getElementById("budgetCard").innerText = "₹" + remaining.toFixed(2);
 
     createChart(food, travel, entertainment);
-    saveSection('budget', values);
+    if (shouldSave) saveSection('budget', values);
 }
 
 /* Chart */

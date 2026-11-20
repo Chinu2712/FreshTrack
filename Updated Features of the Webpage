@@ -36,15 +36,19 @@ The tracker calculates:
 
 `Attendance percentage = (attended classes / total classes) * 100`
 
-It displays the percentage and shows a warning when attendance is below 75%.
+It displays the percentage, warns when attendance is below the selected target (75% by default), and estimates the number of consecutive classes needed to meet that target.
 
 ### CGPA predictor
 
-The current estimator uses two semester values:
+The estimator uses two semester values and supports optional credits:
 
 `Estimated CGPA = (Semester 1 SGPA + Semester 2 SGPA) / 2`
 
-This is a simple estimate and does not account for course credits.
+If credits are entered for both semesters, it calculates a credit-weighted estimate:
+
+`Estimated CGPA = (SGPA 1 * credits 1 + SGPA 2 * credits 2) / (credits 1 + credits 2)`
+
+Credits must be entered for both semesters or left blank for the simple average.
 
 ### Budget tracker and expense chart
 
@@ -63,11 +67,11 @@ It displays the remaining amount and a Chart.js pie chart of the three expense c
 
 ### Browser storage
 
-After a successful calculation, the corresponding values are saved in the browser's `localStorage` and restored when the page is opened again in the same browser. Data stays on that browser/device; it is not an account, cloud backup, or cross-device sync. Clearing browser site data removes these saved entries. A status message on the dashboard reports whether data was restored or saved.
+The Profiles section supports up to six named profiles. Each profile has its own attendance, CGPA, and budget entries, saved in the browser's `localStorage`. Add a profile, switch with the selector, or remove the active profile; at least one profile is kept. Existing single-profile data is migrated to a default profile. Data stays on that browser/device; profiles are not accounts, password-protected, cloud-backed up, or synchronized between devices. Clearing browser site data removes them. Do not enter sensitive personal information.
 
 ### Help/contact
 
-The help form collects an email address and a query and submits them to Web3Forms. The access key in `pop.html` is currently a placeholder (`YOUR_ACCESS_KEY`); replace it with a valid key for the form to work.
+The help form collects the sender's email and message. To send directly from the page, replace the `YOUR_ACCESS_KEY` placeholder in `pop.html` with a Web3Forms access key created for `shauryasalke@gmail.com`. Web3Forms delivers to the inbox associated with that key. Do not put an unrelated or secret SMTP credential in the page. Without a configured key, submitting the form opens a prefilled email draft addressed to `shauryasalke@gmail.com`; the sender must review and press Send in their email app. A static webpage cannot send mail in the background without a configured email service.
 
 ## Running the project
 
@@ -80,5 +84,5 @@ The help form collects an email address and a query and submits them to Web3Form
 - `pop.html` — dashboard content, inputs, and external libraries.
 - `style.css` — page styling.
 - `main.js` — welcome screen, calculators, validation, chart, and `localStorage`.
-- `script.js` — help form submission.
-- `Read-me.md` — original project notes.
+- `script.js` — help form delivery through Web3Forms or a prefilled email draft.
+- `README.md` — project overview, setup, features, and limitations.

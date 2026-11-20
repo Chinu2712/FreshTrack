@@ -105,6 +105,7 @@ body{
     background:#1e1e1e;
     padding:20px;
     position:fixed;
+    overflow-y:auto;
 }
 
 .sidebar h2{
@@ -165,6 +166,27 @@ input{
     border-radius:8px;
 }
 
+textarea,
+select{
+    display:block;
+    margin:10px 0;
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    font:inherit;
+}
+
+textarea{
+    min-height:120px;
+    resize:vertical;
+}
+
+label{
+    display:block;
+    margin-top:12px;
+}
+
 button{
     padding:10px 15px;
     border:none;
@@ -176,6 +198,18 @@ button{
 
 button:hover{
     background:#388e3c;
+}
+
+button:disabled{
+    opacity:0.55;
+    cursor:not-allowed;
+}
+
+.profile-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin:10px 0;
 }
 
 #warning{
