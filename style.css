@@ -157,7 +157,13 @@ body{
     margin-bottom:25px;
     scroll-margin-top:20px;
 }
-
+.chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    height: 300px;
+    margin: 0 auto;
+}
 input{
     display:block;
     margin:10px 0;
