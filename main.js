@@ -461,8 +461,11 @@ function calculateBudget(shouldSave = true){
 
     const remaining = budget - totalExpense;
 
-    document.getElementById("budgetResult").innerText =
-        "Remaining Budget: ₹" + remaining.toFixed(2);
+    const budgetMessage = remaining < 0
+    ? "Over budget by: ₹" + Math.abs(remaining).toFixed(2)
+    : "Remaining Budget: ₹" + remaining.toFixed(2);
+    
+    document.getElementById("budgetResult").innerText = budgetMessage;
 
     document.getElementById("budgetCard").innerText = "₹" + remaining.toFixed(2);
 
