@@ -1,14 +1,24 @@
 window.addEventListener('DOMContentLoaded', () => {
   const popup = document.getElementById('welcome-screen');
   const enterBtn = document.getElementById('close-popup');
+  initializeTheme();
   initializeProfileControls();
   loadProfiles();
 
+  function showThemeToggle() {
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (themeToggle) {
+      themeToggle.classList.remove('theme-toggle--hidden');
+    }
+  }
+
   function hidePopup() {
     if (!popup || popup.classList.contains('popup-hidden')) {
+      showThemeToggle();
       return;
     }
 
+    showThemeToggle();
     popup.classList.add('popup-hidden');
 
     setTimeout(() => {
@@ -16,20 +26,86 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 500);
   }
 
-  if (popup && enterBtn) {
-    enterBtn.addEventListener('click', hidePopup);
-
+  if (popup) {
+    if (enterBtn) {
+      enterBtn.addEventListener('click', hidePopup);
+    }
     setTimeout(hidePopup, 4000);
+  } else {
+    showThemeToggle();
   }
 });
 
 let chart;
+let lastExpenseValues = null;
 const STORAGE_KEY = 'freshTrackProfiles';
 const LEGACY_STORAGE_KEY = 'freshTrackDashboard';
+const THEME_STORAGE_KEY = 'freshTrackTheme';
 const MAX_PROFILES = 6;
 let profiles = [];
 let activeProfileId = null;
 let savedData = createEmptyData();
+
+function getStoredTheme() {
+    try {
+        const theme = localStorage.getItem(THEME_STORAGE_KEY);
+        return theme === 'light' || theme === 'dark' ? theme : 'dark';
+    } catch (error) {
+        return 'dark';
+    }
+}
+
+function applyChartTheme(theme) {
+    if (typeof Chart === 'undefined') {
+        return;
+    }
+
+    const textColor = theme === 'light' ? '#17212b' : '#ffffff';
+    Chart.defaults.color = textColor;
+    if (Chart.defaults.plugins && Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels) {
+        Chart.defaults.plugins.legend.labels.color = textColor;
+    }
+}
+
+function applyTheme(theme, shouldPersist = true) {
+    const resolvedTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+
+    const toggle = document.getElementById('themeToggle');
+    if (toggle) {
+        const isDark = resolvedTheme === 'dark';
+        toggle.setAttribute('aria-checked', isDark ? 'true' : 'false');
+        toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+        toggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    }
+
+    applyChartTheme(resolvedTheme);
+
+    if (chart && lastExpenseValues) {
+        createChart(lastExpenseValues.food, lastExpenseValues.travel, lastExpenseValues.entertainment);
+    }
+
+    if (shouldPersist) {
+        try {
+            localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
+        } catch (error) {
+            // Theme can still apply for this session when storage is unavailable.
+        }
+    }
+}
+
+function initializeTheme() {
+    const initialTheme = getStoredTheme();
+    applyTheme(initialTheme, false);
+
+    const toggle = document.getElementById('themeToggle');
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+            applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+        });
+    }
+}
 
 function createEmptyData() {
     return {
@@ -253,6 +329,7 @@ function loadActiveProfile() {
         chart.destroy();
         chart = null;
     }
+    lastExpenseValues = null;
 
     if (savedData.attendance) {
         document.getElementById('totalClasses').value = savedData.attendance.total;
@@ -477,9 +554,18 @@ function createChart(food, travel, entertainment){
     let ctx =
         document.getElementById("expenseChart");
 
+    if (!ctx || typeof Chart === 'undefined') {
+        return;
+    }
+
+    lastExpenseValues = { food, travel, entertainment };
+
     if(chart){
         chart.destroy();
     }
+
+    const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const textColor = theme === 'light' ? '#17212b' : '#ffffff';
 
     chart = new Chart(ctx, {
 
@@ -504,8 +590,19 @@ function createChart(food, travel, entertainment){
                     '#FF6384',
                     '#36A2EB',
                     '#FFCE56'
-                ]
+                ],
+                borderColor: theme === 'light' ? '#ffffff' : '#1e1e1e',
+                borderWidth: 2
             }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                }
+            }
         }
 
     });
