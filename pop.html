@@ -25,7 +25,7 @@
 </head>
 
 <body id="body">
-    <div class="theme-toggle theme-toggle--hidden" aria-label="Color theme">
+    <div class="theme-toggle" aria-label="Color theme">
         <span class="theme-label theme-label-light">Light</span>
         <button type="button" id="themeToggle" class="theme-switch" role="switch" aria-checked="false" aria-label="Switch to dark mode">
             <span class="switch-track">
@@ -207,31 +207,10 @@
             step="0.01"
             required>
 
-        <input
-            type="number"
-            id="foodExpense"
-            placeholder = "Food Expense"
-            min="0"
-            step="0.01"
-            required>
+        <div id="expenseEntries" class="expense-entries" aria-label="Budget expenses"></div>
+        <button type="button" id="addExpenseBtn">Add Expense Entry</button>
 
-        <input
-            type = "number"
-            id = "travelExpense"
-            placeholder = "Travel Expense"
-            min="0"
-            step="0.01"
-            required>
-
-        <input
-            type = "number"
-            id = "entExpense"
-            placeholder = "Entertainment Expense"
-            min="0"
-            step="0.01"
-            required>
-
-        <button onclick = "calculateBudget()">
+        <button type="button" id="generateBudgetBtn">
             Generate Report
         </button>
 

@@ -3,22 +3,11 @@ window.addEventListener('DOMContentLoaded', () => {
   const enterBtn = document.getElementById('close-popup');
   initializeTheme();
   initializeProfileControls();
+  initializeBudgetControls();
   loadProfiles();
 
-  function showThemeToggle() {
-    const themeToggle = document.querySelector('.theme-toggle');
-    if (themeToggle) {
-      themeToggle.classList.remove('theme-toggle--hidden');
-    }
-  }
-
   function hidePopup() {
-    if (!popup || popup.classList.contains('popup-hidden')) {
-      showThemeToggle();
-      return;
-    }
-
-    showThemeToggle();
+    if (!popup || popup.classList.contains('popup-hidden')) return;
     popup.classList.add('popup-hidden');
 
     setTimeout(() => {
@@ -31,8 +20,6 @@ window.addEventListener('DOMContentLoaded', () => {
       enterBtn.addEventListener('click', hidePopup);
     }
     setTimeout(hidePopup, 4000);
-  } else {
-    showThemeToggle();
   }
 });
 
@@ -82,7 +69,7 @@ function applyTheme(theme, shouldPersist = true) {
     applyChartTheme(resolvedTheme);
 
     if (chart && lastExpenseValues) {
-        createChart(lastExpenseValues.food, lastExpenseValues.travel, lastExpenseValues.entertainment);
+        createChart(lastExpenseValues);
     }
 
     if (shouldPersist) {
@@ -180,16 +167,31 @@ function normalizeProfileData(data) {
 
     const budget = data.budget;
     if (budget !== undefined && budget !== null) {
-        const budgetFields = ['amount', 'food', 'travel', 'entertainment'];
+        let expenses;
+        if (Array.isArray(budget.expenses)) {
+            expenses = budget.expenses;
+        } else {
+            expenses = [
+                { name: 'Food', amount: budget.food },
+                { name: 'Travel', amount: budget.travel },
+                { name: 'Entertainment', amount: budget.entertainment }
+            ];
+        }
+
         if (typeof budget !== 'object' || Array.isArray(budget) ||
-            budgetFields.some((field) => !Number.isFinite(budget[field]) || budget[field] < 0)) {
+            !Number.isFinite(budget.amount) || budget.amount < 0 ||
+            !Array.isArray(expenses) ||
+            expenses.some((expense) => !expense || typeof expense.name !== 'string' ||
+                !expense.name.trim() || expense.name.trim().length > 40 ||
+                !Number.isFinite(expense.amount) || expense.amount < 0)) {
             hasInvalidSection = true;
         } else {
             normalized.budget = {
                 amount: budget.amount,
-                food: budget.food,
-                travel: budget.travel,
-                entertainment: budget.entertainment
+                expenses: expenses.map((expense) => ({
+                    name: expense.name.trim(),
+                    amount: expense.amount
+                }))
             };
         }
     }
@@ -285,6 +287,57 @@ function initializeProfileControls() {
     document.getElementById('removeProfileBtn').addEventListener('click', removeCurrentProfile);
 }
 
+function initializeBudgetControls() {
+    document.getElementById('addExpenseBtn').addEventListener('click', () => {
+        const row = addExpenseEntry('', '');
+        row.querySelector('.expense-name').focus();
+    });
+    document.getElementById('generateBudgetBtn').addEventListener('click', () => calculateBudget());
+}
+
+function addExpenseEntry(name, amount) {
+    const row = document.createElement('div');
+    row.className = 'expense-entry';
+
+    const nameLabel = document.createElement('label');
+    nameLabel.textContent = 'Expense name';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'expense-name';
+    nameInput.placeholder = 'e.g. Books';
+    nameInput.maxLength = 40;
+    nameInput.value = name;
+    nameLabel.appendChild(nameInput);
+
+    const amountLabel = document.createElement('label');
+    amountLabel.textContent = 'Amount (₹)';
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.className = 'expense-amount';
+    amountInput.placeholder = 'Expense amount';
+    amountInput.min = '0';
+    amountInput.step = '0.01';
+    amountInput.value = amount;
+    amountLabel.appendChild(amountInput);
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'remove-expense-btn';
+    removeButton.textContent = 'Remove';
+    removeButton.setAttribute('aria-label', 'Remove this expense entry');
+    removeButton.addEventListener('click', () => row.remove());
+
+    row.append(nameLabel, amountLabel, removeButton);
+    document.getElementById('expenseEntries').appendChild(row);
+    return row;
+}
+
+function renderExpenseEntries(expenses) {
+    const container = document.getElementById('expenseEntries');
+    container.replaceChildren();
+    expenses.forEach((expense) => addExpenseEntry(expense.name, expense.amount));
+}
+
 function getActiveProfile() {
     return profiles.find((profile) => profile.id === activeProfileId);
 }
@@ -311,7 +364,7 @@ function loadActiveProfile() {
     savedData = profile.data;
     const inputIds = [
         'totalClasses', 'attendedClasses', 'sgpa1', 'sgpa2', 'sgpa1Credits',
-        'sgpa2Credits', 'budget', 'foodExpense', 'travelExpense', 'entExpense'
+        'sgpa2Credits', 'budget'
     ];
     inputIds.forEach((id) => {
         document.getElementById(id).value = '';
@@ -325,6 +378,11 @@ function loadActiveProfile() {
     document.getElementById('attendanceCard').innerText = '0%';
     document.getElementById('cgpaCard').innerText = '0.0';
     document.getElementById('budgetCard').innerText = '₹0';
+    renderExpenseEntries([
+        { name: 'Food', amount: '' },
+        { name: 'Travel', amount: '' },
+        { name: 'Entertainment', amount: '' }
+    ]);
     if (chart) {
         chart.destroy();
         chart = null;
@@ -346,9 +404,7 @@ function loadActiveProfile() {
     }
     if (savedData.budget) {
         document.getElementById('budget').value = savedData.budget.amount;
-        document.getElementById('foodExpense').value = savedData.budget.food;
-        document.getElementById('travelExpense').value = savedData.budget.travel;
-        document.getElementById('entExpense').value = savedData.budget.entertainment;
+        renderExpenseEntries(savedData.budget.expenses);
         calculateBudget(false);
     }
     document.getElementById('activeProfileName').innerText = profile.name;
@@ -516,43 +572,49 @@ function calculateCGPA(shouldSave = true){
 
 function calculateBudget(shouldSave = true){
 
-    const inputValues = {
-        amount: document.getElementById("budget").value,
-        food: document.getElementById("foodExpense").value,
-        travel: document.getElementById("travelExpense").value,
-        entertainment: document.getElementById("entExpense").value
-    };
-    const values = Object.fromEntries(
-        Object.entries(inputValues).map(([key, value]) => [key, Number(value)])
-    );
+    const budgetInput = document.getElementById('budget').value;
+    const budget = Number(budgetInput);
+    const expenses = Array.from(document.querySelectorAll('#expenseEntries .expense-entry')).map((row) => ({
+        name: row.querySelector('.expense-name').value.trim(),
+        amountInput: row.querySelector('.expense-amount').value,
+        amount: Number(row.querySelector('.expense-amount').value)
+    }));
 
-    if (Object.values(inputValues).some((value) => value === '') ||
-        Object.values(values).some((value) => !Number.isFinite(value) || value < 0)) {
+    if (budgetInput === '' || !Number.isFinite(budget) || budget < 0 ||
+        expenses.some((expense) =>
+            !expense.name || expense.name.length > 40 || expense.amountInput === '' ||
+            !Number.isFinite(expense.amount) || expense.amount < 0)) {
         document.getElementById("budgetResult").innerText =
-            "Enter a budget and non-negative amounts for all expense categories.";
+            "Enter a budget, an expense name, and a non-negative amount for every entry.";
         return;
     }
 
-    const { amount: budget, food, travel, entertainment } = values;
-    const totalExpense = food + travel + entertainment;
+    const savedExpenses = expenses.map(({ name, amount }) => ({ name, amount }));
+    const totalExpense = savedExpenses.reduce((total, expense) => total + expense.amount, 0);
 
     const remaining = budget - totalExpense;
 
-    const budgetMessage = remaining < 0
-    ? "Over budget by: ₹" + Math.abs(remaining).toFixed(2)
-    : "Remaining Budget: ₹" + remaining.toFixed(2);
+    const expenseSummary = savedExpenses.length
+        ? savedExpenses.map((expense) => expense.name + ': ₹' + expense.amount.toFixed(2)).join(' | ')
+        : 'No expense entries';
+    const budgetMessage = expenseSummary + ' | Total expenses: ₹' + totalExpense.toFixed(2) + ' | ' +
+        (remaining < 0
+            ? "Over budget by: ₹" + Math.abs(remaining).toFixed(2)
+            : "Remaining Budget: ₹" + remaining.toFixed(2));
     
     document.getElementById("budgetResult").innerText = budgetMessage;
 
     document.getElementById("budgetCard").innerText = "₹" + remaining.toFixed(2);
 
-    createChart(food, travel, entertainment);
-    if (shouldSave) saveSection('budget', values);
+    createChart(savedExpenses);
+    if (shouldSave) saveSection('budget', { amount: budget, expenses: savedExpenses });
 }
 
 /* Chart */
 
-function createChart(food, travel, entertainment){
+function createChart(expenses){
+
+    lastExpenseValues = expenses.map((expense) => ({ ...expense }));
 
     let ctx =
         document.getElementById("expenseChart");
@@ -561,14 +623,13 @@ function createChart(food, travel, entertainment){
         return;
     }
 
-    lastExpenseValues = { food, travel, entertainment };
-
     if(chart){
         chart.destroy();
     }
 
     const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
     const textColor = theme === 'light' ? '#17212b' : '#ffffff';
+    const chartColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
 
     chart = new Chart(ctx, {
 
@@ -576,24 +637,12 @@ function createChart(food, travel, entertainment){
 
         data: {
 
-            labels: [
-                'Food',
-                'Travel',
-                'Entertainment'
-            ],
+            labels: expenses.map((expense) => expense.name),
 
             datasets: [{
-                data: [
-                    food,
-                    travel,
-                    entertainment
-                ],
+                data: expenses.map((expense) => expense.amount),
 
-                backgroundColor:[
-                    '#FF6384',
-                    '#36A2EB',
-                    '#FFCE56'
-                ],
+                backgroundColor: expenses.map((_, index) => chartColors[index % chartColors.length]),
                 borderColor: theme === 'light' ? '#ffffff' : '#1e1e1e',
                 borderWidth: 2
             }]
