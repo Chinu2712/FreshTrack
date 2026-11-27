@@ -1,97 +1,65 @@
 window.addEventListener('DOMContentLoaded', () => {
-  const popup = document.getElementById('welcome-screen');
-  const enterBtn = document.getElementById('close-popup');
-  initializeTheme();
-  initializeProfileControls();
-  initializeBudgetControls();
-  loadProfiles();
+    const popup = document.getElementById('welcome-screen');
+    const enterButton = document.getElementById('close-popup');
 
-  function hidePopup() {
-    if (!popup || popup.classList.contains('popup-hidden')) return;
-    popup.classList.add('popup-hidden');
+    initializeProfileControls();
+    initializeBudgetControls();
+    initializeTrackerButtons();
+    loadProfiles();
 
-    setTimeout(() => {
-      popup.style.display = 'none';
-    }, 500);
-  }
+    function hidePopup() {
+        if (!popup || popup.classList.contains('popup-hidden')) {
+            showThemeToggle();
+            return;
+        }
 
-  if (popup) {
-    if (enterBtn) {
-      enterBtn.addEventListener('click', hidePopup);
+        popup.classList.add('popup-hidden');
+
+        setTimeout(() => {
+            popup.style.display = 'none';
+            showThemeToggle();
+        }, 500);
     }
-    setTimeout(hidePopup, 4000);
-  }
+
+    if (popup) {
+        if (enterButton) {
+            enterButton.addEventListener('click', hidePopup);
+        }
+        setTimeout(hidePopup, 4000);
+    } else {
+        showThemeToggle();
+    }
 });
+
+function showThemeToggle() {
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (themeToggle) {
+        themeToggle.classList.remove('theme-toggle--hidden');
+    }
+}
 
 let chart;
 let lastExpenseValues = null;
 const STORAGE_KEY = 'freshTrackProfiles';
 const LEGACY_STORAGE_KEY = 'freshTrackDashboard';
-const THEME_STORAGE_KEY = 'freshTrackTheme';
 const MAX_PROFILES = 6;
 let profiles = [];
 let activeProfileId = null;
 let savedData = createEmptyData();
 
-function getStoredTheme() {
-    try {
-        const theme = localStorage.getItem(THEME_STORAGE_KEY);
-        return theme === 'light' || theme === 'dark' ? theme : 'dark';
-    } catch (error) {
-        return 'dark';
+document.addEventListener('themechange', (event) => {
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.color = event.detail.theme === 'light' ? '#17212b' : '#ffffff';
     }
-}
-
-function applyChartTheme(theme) {
-    if (typeof Chart === 'undefined') {
-        return;
-    }
-
-    const textColor = theme === 'light' ? '#17212b' : '#ffffff';
-    Chart.defaults.color = textColor;
-    if (Chart.defaults.plugins && Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels) {
-        Chart.defaults.plugins.legend.labels.color = textColor;
-    }
-}
-
-function applyTheme(theme, shouldPersist = true) {
-    const resolvedTheme = theme === 'light' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', resolvedTheme);
-
-    const toggle = document.getElementById('themeToggle');
-    if (toggle) {
-        const isDark = resolvedTheme === 'dark';
-        toggle.setAttribute('aria-checked', isDark ? 'true' : 'false');
-        toggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
-        toggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-    }
-
-    applyChartTheme(resolvedTheme);
 
     if (chart && lastExpenseValues) {
         createChart(lastExpenseValues);
     }
+});
 
-    if (shouldPersist) {
-        try {
-            localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
-        } catch (error) {
-            // Theme can still apply for this session when storage is unavailable.
-        }
-    }
-}
-
-function initializeTheme() {
-    const initialTheme = getStoredTheme();
-    applyTheme(initialTheme, false);
-
-    const toggle = document.getElementById('themeToggle');
-    if (toggle) {
-        toggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-            applyTheme(currentTheme === 'light' ? 'dark' : 'light');
-        });
-    }
+function initializeTrackerButtons() {
+    document.getElementById('attendanceBtn').addEventListener('click', () => calculateAttendance());
+    document.getElementById('cgpaBtn').addEventListener('click', () => calculateCGPA());
 }
 
 function createEmptyData() {
@@ -494,136 +462,140 @@ function saveSection(section, values) {
     }
 }
 
-function calculateAttendance(shouldSave = true){
-
-    const totalInput = document.getElementById("totalClasses");
-    const attendedInput = document.getElementById("attendedClasses");
-    const targetInput = document.getElementById("attendanceTarget");
+function calculateAttendance(shouldSave = true) {
+    const totalInput = document.getElementById('totalClasses');
+    const attendedInput = document.getElementById('attendedClasses');
+    const targetInput = document.getElementById('attendanceTarget');
     const total = Number(totalInput.value);
     const attended = Number(attendedInput.value);
     const target = Number(targetInput.value);
-    const result = document.getElementById("attendanceResult");
-    const targetResult = document.getElementById("attendanceTargetResult");
-    const warning = document.getElementById("warning");
+    const result = document.getElementById('attendanceResult');
+    const targetResult = document.getElementById('attendanceTargetResult');
+    const warning = document.getElementById('warning');
 
-    if (!totalInput.value || !attendedInput.value || !targetInput.value ||
+    const invalidInput =
+        !totalInput.value ||
+        !attendedInput.value ||
+        !targetInput.value ||
         !Number.isInteger(total) || !Number.isInteger(attended) ||
         !Number.isFinite(target) || target < 0 || target > 100 ||
-        total < 1 || attended < 0 || attended > total) {
-        result.innerText = "Enter whole-number class counts with total classes above 0, attended classes between 0 and total, and a target from 0 to 100%.";
+        total < 1 || attended < 0 || attended > total;
+
+    if (invalidInput) {
+        result.innerText = 'Enter whole-number class counts with total classes above 0, attended classes between 0 and total, and a target from 0 to 100%.';
         targetResult.innerText = "";
         warning.innerText = "";
         return;
     }
 
     const percentage = (attended / total) * 100;
-    let targetMessage;
-    if (percentage >= target) {
-        targetMessage = "Attendance target met. No extra classes needed.";
-    } else if (target === 100) {
-        targetMessage = "A 100% attendance target cannot be reached after missing a class.";
-    } else {
-        const requiredClasses = Math.ceil(((target / 100) * total - attended) / (1 - target / 100));
-        targetMessage = "Attend the next " + requiredClasses + " classes to reach " + target + "%.";
+    const targetMet = attended * 100 >= target * total;
+    let targetMessage = 'Attendance target met. No extra classes needed.';
+
+    if (!targetMet && target === 100) {
+        targetMessage = 'A 100% attendance target cannot be reached after missing a class.';
+    } else if (!targetMet) {
+        const requiredClasses = Math.ceil((target * total - 100 * attended) / (100 - target));
+        targetMessage = 'Attend the next ' + requiredClasses + ' classes to reach ' + target + '%.';
     }
 
-    result.innerText = "Attendance: " + percentage.toFixed(2) + "%";
+    result.innerText = 'Attendance: ' + percentage.toFixed(2) + '%';
     targetResult.innerText = targetMessage;
 
-    document.getElementById("attendanceCard").innerText = percentage.toFixed(1) + "%";
+    document.getElementById('attendanceCard').innerText = percentage.toFixed(1) + '%';
 
-    warning.innerText = percentage < target
-        ? "⚠ Warning: Attendance below " + target + "%"
-        : "✅ Attendance Safe";
+    warning.innerText = !targetMet
+        ? '⚠ Warning: Attendance below ' + target + '%'
+        : '✅ Attendance Safe';
     if (shouldSave) saveSection('attendance', { total, attended, target });
 }
 
-function calculateCGPA(shouldSave = true){
-
-    const sgpa1Input = document.getElementById("sgpa1");
-    const sgpa2Input = document.getElementById("sgpa2");
-    const credits1Input = document.getElementById("sgpa1Credits");
-    const credits2Input = document.getElementById("sgpa2Credits");
+function calculateCGPA(shouldSave = true) {
+    const sgpa1Input = document.getElementById('sgpa1');
+    const sgpa2Input = document.getElementById('sgpa2');
+    const credits1Input = document.getElementById('sgpa1Credits');
+    const credits2Input = document.getElementById('sgpa2Credits');
     const sgpa1 = Number(sgpa1Input.value);
     const sgpa2 = Number(sgpa2Input.value);
     const credits1 = credits1Input.value === '' ? null : Number(credits1Input.value);
     const credits2 = credits2Input.value === '' ? null : Number(credits2Input.value);
+    const hasCreditsForBoth = credits1 !== null && credits2 !== null;
+    const hasNoCredits = credits1 === null && credits2 === null;
+    const validCredits = hasNoCredits ||
+        (hasCreditsForBoth && Number.isFinite(credits1) && credits1 > 0 &&
+            Number.isFinite(credits2) && credits2 > 0);
 
     if (!sgpa1Input.value || !sgpa2Input.value ||
         !Number.isFinite(sgpa1) || !Number.isFinite(sgpa2) ||
         sgpa1 < 0 || sgpa1 > 10 || sgpa2 < 0 || sgpa2 > 10 ||
-        (credits1 === null) !== (credits2 === null) ||
-        (credits1 !== null && (!Number.isFinite(credits1) || credits1 <= 0)) ||
-        (credits2 !== null && (!Number.isFinite(credits2) || credits2 <= 0))) {
-        document.getElementById("cgpaResult").innerText =
-            "Enter both SGPAs from 0 to 10 and either both credit values above 0 or leave both credits blank.";
+        !validCredits) {
+        document.getElementById('cgpaResult').innerText =
+            'Enter both SGPAs from 0 to 10 and either both credit values above 0 or leave both credits blank.';
         return;
     }
 
-    const cgpa = credits1 === null
+    const cgpa = hasNoCredits
         ? (sgpa1 + sgpa2) / 2
         : ((sgpa1 * credits1) + (sgpa2 * credits2)) / (credits1 + credits2);
 
-    document.getElementById("cgpaResult").innerText = "Estimated CGPA: " + cgpa.toFixed(2) +
-        (credits1 === null ? " (simple average)" : " (credit-weighted)");
-    document.getElementById("cgpaCard").innerText = cgpa.toFixed(2);
+    document.getElementById('cgpaResult').innerText = 'Estimated CGPA: ' + cgpa.toFixed(2) +
+        (hasNoCredits ? ' (simple average)' : ' (credit-weighted)');
+    document.getElementById('cgpaCard').innerText = cgpa.toFixed(2);
     if (shouldSave) saveSection('cgpa', { sgpa1, sgpa2, sgpa1Credits: credits1, sgpa2Credits: credits2 });
 }
 
-function calculateBudget(shouldSave = true){
-
+function calculateBudget(shouldSave = true) {
     const budgetInput = document.getElementById('budget').value;
     const budget = Number(budgetInput);
-    const expenses = Array.from(document.querySelectorAll('#expenseEntries .expense-entry')).map((row) => ({
-        name: row.querySelector('.expense-name').value.trim(),
-        amountInput: row.querySelector('.expense-amount').value,
-        amount: Number(row.querySelector('.expense-amount').value)
-    }));
+    const expenseRows = document.querySelectorAll('#expenseEntries .expense-entry');
+    const expenses = [];
 
-    if (budgetInput === '' || !Number.isFinite(budget) || budget < 0 ||
-        expenses.some((expense) =>
-            !expense.name || expense.name.length > 40 || expense.amountInput === '' ||
-            !Number.isFinite(expense.amount) || expense.amount < 0)) {
-        document.getElementById("budgetResult").innerText =
-            "Enter a budget, an expense name, and a non-negative amount for every entry.";
+    for (const row of expenseRows) {
+        const name = row.querySelector('.expense-name').value.trim();
+        const amountInput = row.querySelector('.expense-amount').value;
+        const amount = Number(amountInput);
+
+        if (!name || name.length > 40 || amountInput === '' ||
+            !Number.isFinite(amount) || amount < 0) {
+            document.getElementById('budgetResult').innerText =
+                'Enter a budget, an expense name, and a non-negative amount for every entry.';
+            return;
+        }
+
+        expenses.push({ name, amount });
+    }
+
+    if (budgetInput === '' || !Number.isFinite(budget) || budget < 0) {
+        document.getElementById('budgetResult').innerText =
+            'Enter a budget, an expense name, and a non-negative amount for every entry.';
         return;
     }
 
-    const savedExpenses = expenses.map(({ name, amount }) => ({ name, amount }));
-    const totalExpense = savedExpenses.reduce((total, expense) => total + expense.amount, 0);
-
+    const totalExpense = expenses.reduce((total, expense) => total + expense.amount, 0);
     const remaining = budget - totalExpense;
-
-    const expenseSummary = savedExpenses.length
-        ? savedExpenses.map((expense) => expense.name + ': ₹' + expense.amount.toFixed(2)).join(' | ')
+    const expenseSummary = expenses.length
+        ? expenses.map((expense) => expense.name + ': ₹' + expense.amount.toFixed(2)).join(' | ')
         : 'No expense entries';
     const budgetMessage = expenseSummary + ' | Total expenses: ₹' + totalExpense.toFixed(2) + ' | ' +
         (remaining < 0
-            ? "Over budget by: ₹" + Math.abs(remaining).toFixed(2)
-            : "Remaining Budget: ₹" + remaining.toFixed(2));
-    
-    document.getElementById("budgetResult").innerText = budgetMessage;
+            ? 'Over budget by: ₹' + Math.abs(remaining).toFixed(2)
+            : 'Remaining Budget: ₹' + remaining.toFixed(2));
 
-    document.getElementById("budgetCard").innerText = "₹" + remaining.toFixed(2);
+    document.getElementById('budgetResult').innerText = budgetMessage;
+    document.getElementById('budgetCard').innerText = '₹' + remaining.toFixed(2);
 
-    createChart(savedExpenses);
-    if (shouldSave) saveSection('budget', { amount: budget, expenses: savedExpenses });
+    createChart(expenses);
+    if (shouldSave) saveSection('budget', { amount: budget, expenses });
 }
 
-/* Chart */
-
-function createChart(expenses){
-
+function createChart(expenses) {
     lastExpenseValues = expenses.map((expense) => ({ ...expense }));
-
-    let ctx =
-        document.getElementById("expenseChart");
-
-    if (!ctx || typeof Chart === 'undefined') {
+    const canvas = document.getElementById('expenseChart');
+    if (!canvas || typeof Chart === 'undefined') {
         return;
     }
 
-    if(chart){
+    if (chart) {
         chart.destroy();
     }
 
@@ -631,17 +603,12 @@ function createChart(expenses){
     const textColor = theme === 'light' ? '#17212b' : '#ffffff';
     const chartColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
 
-    chart = new Chart(ctx, {
-
+    chart = new Chart(canvas, {
         type: 'pie',
-
         data: {
-
             labels: expenses.map((expense) => expense.name),
-
             datasets: [{
                 data: expenses.map((expense) => expense.amount),
-
                 backgroundColor: expenses.map((_, index) => chartColors[index % chartColors.length]),
                 borderColor: theme === 'light' ? '#ffffff' : '#1e1e1e',
                 borderWidth: 2
@@ -650,12 +617,9 @@ function createChart(expenses){
         options: {
             plugins: {
                 legend: {
-                    labels: {
-                        color: textColor
-                    }
+                    labels: { color: textColor }
                 }
             }
         }
-
     });
 }

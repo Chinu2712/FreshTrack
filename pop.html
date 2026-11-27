@@ -9,25 +9,20 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    try {
-        var savedTheme = localStorage.getItem('freshTrackTheme');
-        if (savedTheme === 'light' || savedTheme === 'dark') {
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        } else {
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
-    } catch (error) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
-</script>
+<script src="theme.js"></script>
 
 </head>
 
-<body id="body">
-    <div class="theme-toggle" aria-label="Color theme">
+<body>
+    <div class="theme-toggle theme-toggle--hidden" aria-label="Color theme">
         <span class="theme-label theme-label-light">Light</span>
-        <button type="button" id="themeToggle" class="theme-switch" role="switch" aria-checked="false" aria-label="Switch to dark mode">
+        <button
+            type="button"
+            id="themeToggle"
+            class="theme-switch"
+            role="switch"
+            aria-checked="false"
+            aria-label="Switch to dark mode">
             <span class="switch-track">
                 <span class="switch-thumb">
                     <span class="switch-indicator" aria-hidden="true"></span>
@@ -38,11 +33,11 @@
     </div>
 
     <div id="welcome-screen" class="popup-overlay">
-        <div class = "popup-content">
-            <div class = "spinner"></div>
+        <div class="popup-content">
+            <div class="spinner"></div>
             <h1>Welcome to FreshTrack</h1>
-            <p>Your all-in-one college survival assistant!</p>
-            <button id = "close-popup">Get Started</button>
+            <p>Your all-in-one college survival dashboard!</p>
+            <button id="close-popup">Get Started</button>
         </div>
     </div>
 
@@ -137,7 +132,7 @@
             value="75"
             required>
 
-        <button onclick="calculateAttendance()">
+        <button type="button" id="attendanceBtn">
             Check Attendance
         </button>
 
@@ -187,7 +182,7 @@
 
         <p>Enter credits for both semesters to calculate a credit-weighted CGPA, or leave both blank for a simple average.</p>
 
-        <button onclick="calculateCGPA()">
+        <button type="button" id="cgpaBtn">
             Calculate CGPA
         </button>
 
@@ -220,51 +215,58 @@
 
     <!-- Pie Chart -->
 
-    <div class = "section">
+    <div class="section">
 
         <h2>Expense Breakdown</h2>
 
         <div class="chart-container">
-    <canvas id="expenseChart"></canvas>
-    </div>
+            <canvas id="expenseChart"></canvas>
+        </div>
 
     </div>
 
-    <div class = "section" id ="help-center-container">
-        <h2> Help/Contact</h2>
+    <div class="section" id="help-center-container">
+        <h2>Help/Contact</h2>
         <div>
-          <p> For any assistance or queries, please contact us -> </p>
-          <form action="https://api.web3forms.com/submit" method="POST" id="helpForm">
-            <input type="hidden" name="access_key" value="YOUR_ACCESS_KEY">
-            <input type="hidden" name="subject" value="FreshTrack Help/Contact Message">
-            <input type="hidden" name="from_name" value="FreshTrack Contact Form">
-            <div>
-            <label for="contactEmail">Your email address</label>
-            <input type="email" id="contactEmail" name="email" placeholder="you@example.com" autocomplete="email" required>
-            <label for="contactMessage">Your message</label>
-            <textarea id="contactMessage" name="message" placeholder="How can we help?" maxlength="5000" required></textarea>
-            </div>
-            <button type="submit" id="submitBtn">Send Message</button>
-            <p id="formResponse" role="status" aria-live="polite"></p>
-            <p>If direct sending is not configured, your email app will open with a message addressed to shauryasalke@gmail.com.</p>
-          </form>
+            <p>For any assistance or queries, please contact us:</p>
+            <form action="https://api.web3forms.com/submit" method="POST" id="helpForm">
+                <input type="hidden" name="access_key" value="YOUR_ACCESS_KEY">
+                <input type="hidden" name="subject" value="FreshTrack Help/Contact Message">
+                <input type="hidden" name="from_name" value="FreshTrack Contact Form">
+                <div>
+                    <label for="contactEmail">Your email address</label>
+                    <input
+                        type="email"
+                        id="contactEmail"
+                        name="email"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required>
+                    <label for="contactMessage">Your message</label>
+                    <textarea
+                        id="contactMessage"
+                        name="message"
+                        placeholder="How can we help?"
+                        maxlength="5000"
+                        required></textarea>
+                </div>
+                <button type="submit" id="submitBtn">Send Message</button>
+                <p id="formResponse" role="status" aria-live="polite"></p>
+                <p>If direct sending is not configured, your email app will open with a message addressed to shauryasalke@gmail.com.</p>
+            </form>
         </div>
     </div>
 
     <div class="footer">
-    <h3><i class="fa-solid fa-copyright"></i> 2023 FreshTrack. All rights reserved.</h3>
-    <div>
-        <h3>Made with <i class="fa-solid fa-heart"></i> by Shaurya Salke</h3>
+        <h3><i class="fa-solid fa-copyright"></i> 2023 FreshTrack. All rights reserved.</h3>
+        <div>
+            <h3>Made with <i class="fa-solid fa-heart"></i> by Shaurya Salke</h3>
+        </div>
     </div>
-    
-</div>
-
 </main>
 
 <script src="main.js"></script>
 <script src="script.js"></script>
-
-
 
 </body>
 </html>

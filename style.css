@@ -4,6 +4,7 @@
     box-sizing:border-box;
 }
 
+/* Theme colors */
 :root{
     --bg-color:#121212;
     --text-color:#ffffff;
@@ -70,6 +71,7 @@ body{
     transition:background-color 0.35s ease, color 0.35s ease;
 }
 
+/* Theme switch */
 .theme-toggle{
     position:fixed;
     top:18px;
@@ -82,7 +84,17 @@ body{
     border-radius:999px;
     background:rgba(0,0,0,0.12);
     backdrop-filter:blur(8px);
-    transition:background-color 0.35s ease, box-shadow 0.35s ease;
+    opacity:1;
+    visibility:visible;
+    transform:translateY(0);
+    transition:background-color 0.35s ease, box-shadow 0.35s ease, opacity 0.35s ease, transform 0.35s ease, visibility 0.35s ease;
+}
+
+.theme-toggle--hidden{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transform:translateY(-8px);
 }
 
 html[data-theme="light"] .theme-toggle{
@@ -172,6 +184,8 @@ html[data-theme="light"] .theme-label-dark,
 html[data-theme="dark"] .theme-label-light{
     opacity:0.7;
 }
+
+/* Welcome screen */
 .popup-overlay {
   position: fixed;
   top: 0;
@@ -291,6 +305,7 @@ html[data-theme="light"] .sidebar{
     scroll-margin-top:20px;
 }
 
+/* Dashboard cards and sections */
 .summary{
     display:flex;
     gap:20px;
@@ -324,6 +339,7 @@ html[data-theme="light"] .section{
     scroll-margin-top:20px;
     transition:background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
 }
+
 .chart-container {
     position: relative;
     width: 100%;
@@ -331,6 +347,8 @@ html[data-theme="light"] .section{
     height: 300px;
     margin: 0 auto;
 }
+
+/* Form controls */
 input{
     display:block;
     margin:10px 0;
@@ -399,6 +417,7 @@ button:disabled{
     margin-top:10px;
 }
 
+/* Budget entries */
 .expense-entries{
     display:grid;
     gap:10px;
@@ -428,6 +447,7 @@ button:disabled{
     filter:brightness(0.9);
 }
 
+/* Small-screen layout */
 @media (max-width: 900px){
     .theme-toggle{
         top:10px;

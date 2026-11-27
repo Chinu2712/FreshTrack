@@ -5,7 +5,7 @@ FreshTrack is a browser-based college dashboard mini-project built with **HTML5,
 ## Overview
 
 - **Project type:** First-year undergraduate web development mini-project (static website)
-- **Main files:** `pop.html`, `style.css`, `main.js`, `script.js`
+- **Main files:** `pop.html`, `style.css`, `theme.js`, `main.js`, `script.js`
 - **Data storage:** Browser `localStorage` (local to the current browser/device)
 - **External libraries/services:** Chart.js (expense chart), Font Awesome (icons), Web3Forms (optional direct contact form delivery)
 
@@ -67,12 +67,13 @@ FreshTrack is a browser-based college dashboard mini-project built with **HTML5,
 - Credits must be entered for **both** semesters or left blank for both.
 
 ### 8. Budget tracker and expense chart
-- Inputs: **Monthly Budget**, **Food Expense**, **Travel Expense**, and **Entertainment Expense**.
+- Inputs: **Monthly Budget** and named expense entries. Food, travel, and entertainment entries are provided by default, and users can add or remove categories.
 - Calculates:
   - Total expenses across categories
   - Remaining budget:  
-    `Remaining = Monthly Budget - (Food + Travel + Entertainment)`
+    `Remaining = Monthly Budget - sum of expense amounts`
 - Displays the remaining amount and generates/updates a **Chart.js pie chart** showing expense breakdown by category.
+- Expenses can be added with custom names and amounts. The chart displays the entered categories.
 - Expenses may exceed the budget (remaining balance can be negative).
 
 ### 9. Input validation and user feedback
@@ -107,7 +108,7 @@ FreshTrack is a browser-based college dashboard mini-project built with **HTML5,
 
 ## How to run locally
 
-1. Keep `pop.html`, `style.css`, `main.js`, and `script.js` in the same folder.
+1. Keep `pop.html`, `style.css`, `theme.js`, `main.js`, and `script.js` in the same folder.
 2. Open `pop.html` in a modern web browser.
 3. For more consistent browser storage behavior, run the folder with a local development server (for example, VS Code Live Server).
 4. Internet access is required for CDN resources (Chart.js, Font Awesome) and for Web3Forms direct submission when configured.
@@ -128,7 +129,8 @@ If not configured, the form uses the `mailto:` fallback and does not claim backg
 
 - `pop.html` — Page structure, dashboard sections, theme toggle, profile UI, tracker forms, chart canvas, and contact form
 - `style.css` — Styling, dark/light theme variables, animations, layout, and component/form styles
-- `main.js` — Welcome popup behavior, theme toggle/persistence, profile management, tracker calculations, validation, Chart.js rendering, and `localStorage` persistence
+- `theme.js` — Early theme setup, toggle behavior, and saved theme preference
+- `main.js` — Welcome popup behavior, profile management, tracker calculations, validation, Chart.js rendering, and `localStorage` persistence
 - `script.js` — Help/contact form submission logic (Web3Forms or `mailto:` fallback)
 - `README.md` — Existing project README
 - `FRESHTRACK-README.md` — This comprehensive features README (new)
